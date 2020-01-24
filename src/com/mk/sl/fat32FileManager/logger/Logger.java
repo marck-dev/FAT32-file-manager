@@ -663,28 +663,45 @@ public class Logger {
             appName = app;
     }
 
-    public void log(String msg) throws FileNotFoundException {
+    public void log(Exception e) {
+        log( e.getLocalizedMessage() + " " + e.getMessage());
+    }
+
+    public void log(String msg)  {
         String out = prerender("LOG");
         out += msg;
         save(msg);
     }
 
-    public void error(String msg) throws FileNotFoundException {
+    public void error(Exception e) {
+        error( e.getLocalizedMessage() + " " + e.getMessage());
+    }
+
+    public void error(String msg)  {
         String out = prerender("ERROR");
         out += msg;
         save(msg);
     }
 
-    public void info(String msg) throws FileNotFoundException {
+    public void info(Exception e) {
+        info( e.getLocalizedMessage() + " " + e.getMessage());
+    }
+
+    public void info(String msg)  {
         String out = prerender("INFO");
         out += msg;
         save(msg);
     }
 
-    private void save(String msg) throws FileNotFoundException {
-        PrintStream a = new PrintStream(new FileOutputStream(fileName));
-        a.println(msg);
-        a.close();
+    private void save(String msg)  {
+        PrintStream a = null;
+        try {
+            a = new PrintStream(new FileOutputStream(fileName));
+            a.println(msg);
+            a.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     private String prerender(String type){

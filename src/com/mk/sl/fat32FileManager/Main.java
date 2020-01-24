@@ -627,6 +627,7 @@
 
 package com.mk.sl.fat32FileManager;
 
+import com.mk.sl.fat32FileManager.logger.LoggerProvider;
 import org.apache.commons.cli.*;
 
 public class Main {
@@ -636,6 +637,7 @@ public class Main {
         try {
             CommandLine cmd = parser.parse(opts, args);
         } catch (ParseException e) {
+            LoggerProvider.getLogger(Main.class).error(e);
             }
     }
 }
