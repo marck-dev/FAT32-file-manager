@@ -1,4 +1,3 @@
-
 /*
  *  GNU GENERAL PUBLIC LICENSE
  *                        Version 3, 29 June 2007
@@ -625,132 +624,93 @@
  *
  */
 
-package com.mk.sl.fat32FileManager;
+package com.mk.sl.fat32FileManager.core;
 
-import com.mk.sl.fat32FileManager.core.Slicer;
-import com.mk.sl.fat32FileManager.info.InfoProvier;
+import com.mk.sl.fat32FileManager.Main;
 import com.mk.sl.fat32FileManager.logger.LoggerProvider;
-import org.apache.commons.cli.*;
 
 import java.io.*;
-import java.util.Collection;
-import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.Arrays;
 
-public class Main {
-    private static CommandLine cmd;
-    private static PrintStream out = System.out;
-    private static String tempFolder = System.getProperty("java.io.tmpdir");
-    private static Options opts = new Options();
+public class Slicer implements Command{
+    private File file;
+    private ArrayList<String> slices;
+    private String outputFolder;
 
-    private static void printLicenseHead(){
-        try {
-            out.println(InfoProvier.getInstance().get("app.name") + " Copyright (C) 2020  "+
-                    InfoProvier.getInstance().get("author.name")+"\n" +
-                    "    This program comes with ABSOLUTELY NO WARRANTY.\n" +
-                    "    This is free software, and you are welcome to redistribute it\n" +
-                    "    under certain conditions.");
-        } catch (IOException e) {
-            LoggerProvider.getLogger(Main.class).error(e);
-        }
+    public Slicer(File file, String outputFolder) {
+        this.file = file;
+        this.outputFolder = outputFolder;
+        slices = new ArrayList<String>();
     }
-
-    private static void printWaranty(){
-        String w = "  15. Disclaimer of Warranty.\n" +
-                "\n" +
-                "  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY\n" +
-                "APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT\n" +
-                "HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM \"AS IS\" WITHOUT WARRANTY\n" +
-                "OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,\n" +
-                "THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR\n" +
-                "PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM\n" +
-                "IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF\n" +
-                "ALL NECESSARY SERVICING, REPAIR OR CORRECTION.";
-        out.println(w);
+    // comprueba que el archivo no exista y se da el caso, comprueba que no este corrupto
+    private boolean check(){
+        /* if new File(outputFolder + name).exists() -> read();
+        *   r = read()
+        *   if new File(r.getParts()).exists() -> return false
+        *   [] new File(r.getParts()).exists() == false -> return true
+        *   fi
+        * []  new File(outputFolder + name).exists() == false -> return false
+        */
     }
-
-    private static void printConditions(){
-        String w = "    a) Disclaiming warranty or limiting liability differently from the\n" +
-                "    terms of sections 15 and 16 of this License; or\n" +
-                "\n" +
-                "    b) Requiring preservation of specified reasonable legal notices or\n" +
-                "    author attributions in that material or in the Appropriate Legal\n" +
-                "    Notices displayed by works containing it; or\n" +
-                "\n" +
-                "    c) Prohibiting misrepresentation of the origin of that material, or\n" +
-                "    requiring that modified versions of such material be marked in\n" +
-                "    reasonable ways as different from the original version; or\n" +
-                "\n" +
-                "    d) Limiting the use for publicity purposes of names of licensors or\n" +
-                "    authors of the material; or\n" +
-                "\n" +
-                "    e) Declining to grant rights under trademark law for use of some\n" +
-                "    trade names, trademarks, or service marks; or\n" +
-                "\n" +
-                "    f) Requiring indemnification of licensors and authors of that\n" +
-                "    material by anyone who conveys the material (or modified versions of\n" +
-                "    it) with contractual assumptions of liability to the recipient, for\n" +
-                "    any liability that these contractual assumptions directly impose on\n" +
-                "    those licensors and authors.";
-        out.println(w);
-    }
-    private static void help(){
-        printLicenseHead();
-        try {
-            out.println("\n========================================================\n\t"+
-                    InfoProvier.getInstance().get("app.name") + " V" +
-                    InfoProvier.getInstance().get("app.version")+
-                "\n========================================================");
-            out.println();
-            out.println("\nUsage: " + InfoProvier.getInstance().get("app.command") + " [OPTIONS]");
-            Collection<Option> options = opts.getOptions();
-            for(Option next : options){
-                StringBuilder outStr = new StringBuilder("\t-");
-                outStr.append(next.getOpt());
-                if(next.hasLongOpt()) {
-                    outStr.append(", --");
-                    outStr.append(next.getLongOpt());
+    public void run()  {
+        //TODO: check methid
+        if(file.length() > HeaderUtility.MAX_SIZE){
+            // if length is more than the limit we slice into tiny sub-files
+            try {
+                BufferedInputStream bin = new BufferedInputStream(new FileInputStream(file));
+                while(bin.available() > 0){
+                    String name = file.getName().substring(0,4) + (int)(Math.random()* HeaderUtility.MAX_SIZE) + ".part";
+                    byte[] data = new byte[(int) HeaderUtility.MAX_SIZE];
+                    int length = bin.read(data);
+                    BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outputFolder + name));
+                    out.write(data,0,length);
+                    out.close();
+                    slices.add(name);
                 }
-                outStr.append("  ");
-                outStr.append(next.getDescription());
-                out.println(outStr);
+                bin.close();
+            } catch ( IOException e) {
+                LoggerProvider.getLogger(this.getClass()).error(e);
             }
-        } catch (IOException e) {
-            LoggerProvider.getLogger(Main.class).error(e);
+        }else{
+            int blockLength = 1024;
+            String name = file.getName().substring(0,4) + (int)(Math.random()* HeaderUtility.MAX_SIZE) + ".part";
+            slices.add(name);
+            try {
+                byte[] buffer = new byte[blockLength];
+                BufferedInputStream bin = new BufferedInputStream(new FileInputStream(file));
+                BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outputFolder + name));
+                while(bin.available() > 0){
+                    int length = bin.read(buffer);
+                    out.write(buffer, 0, length);
+                }
+
+            } catch (IOException e) {
+                LoggerProvider.getLogger(this.getClass()).error(e);
+            }
+        }
+        if(!slices.isEmpty()){
+            try {
+                BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outputFolder + file.getName() + ".mf"));
+                String header = HeaderUtility.makeHeader(file);
+                header += "file.subfiles: ";
+                for(int i = 0;i < slices.size(); i++){
+                    header += slices.get(i)+";";
+                }
+                out.write((HeaderUtility.getBinaryHeader(header)));
+                out.close();
+            } catch (IOException e) {
+                LoggerProvider.getLogger(this.getClass()).error(e);
+            }
+
         }
     }
-    private static void printLicense(){
-        try {
-            Scanner sc = new Scanner(Main.class.getResourceAsStream(InfoProvier.getInstance().get("app.license.file")));
-            while(sc.hasNext()){
-                out.println(sc.nextLine());
-            }
-            sc.close();
-        } catch (IOException e) {
-            LoggerProvider.getLogger(Main.class).error(e);
-        }
+
+    public File getFile() {
+        return file;
     }
-    public static void main(String[] args) {
-        opts.addOption("h", "help",false, "Show help");
-        opts.addOption("v", "version", false, "Show version");
-        opts.addOption("f", "file", true, "File to slice");
-        opts.addOption("l","license", false, "Show license");
-        opts.addOption("t", "target-folder", true, "Folder where output will be write");
-        opts.addOption("w", false, "Show license waranties");
-        opts.addOption("c", false, "Show license conditions");
-        opts.addOption("i", "iteractive", false, "Start an iteractive shell");
-        CommandLineParser parser = new DefaultParser();
-        try {
-            cmd = parser.parse(opts, args);
-            if (cmd.hasOption("h")){
-                help();
-            }else if(cmd.hasOption("w"))
-                printWaranty();
-            else if(cmd.hasOption("c"))
-                printConditions();
-            else if(cmd.hasOption("l"))
-                printLicense();
-        } catch (ParseException e) {
-            LoggerProvider.getLogger(Main.class).error(e);
-            }
+
+    public ArrayList<String> getSlices() {
+        return slices;
     }
 }
