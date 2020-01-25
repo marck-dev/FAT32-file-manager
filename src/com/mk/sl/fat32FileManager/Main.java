@@ -752,5 +752,6 @@ public class Main {
         } catch (ParseException e) {
             LoggerProvider.getLogger(Main.class).error(e);
             }
+        out.println();
     }
 }

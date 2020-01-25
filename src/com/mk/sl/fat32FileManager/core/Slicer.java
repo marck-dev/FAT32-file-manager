@@ -652,6 +652,7 @@ public class Slicer implements Command{
         *   fi
         * []  new File(outputFolder + name).exists() == false -> return false
         */
+        return false;
     }
     public void run()  {
         //TODO: check methid
