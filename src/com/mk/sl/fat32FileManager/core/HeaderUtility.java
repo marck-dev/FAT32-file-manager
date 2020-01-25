@@ -1,4 +1,3 @@
-
 /*
  *  GNU GENERAL PUBLIC LICENSE
  *                        Version 3, 29 June 2007
@@ -625,27 +624,67 @@
  *
  */
 
-package com.mk.sl.fat32FileManager;
+package com.mk.sl.fat32FileManager.core;
 
-import com.mk.sl.fat32FileManager.logger.LoggerProvider;
-import org.apache.commons.cli.*;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.regex.Pattern;
 
-public class Main {
-    public static void main(String[] args) {
-        Options opts = new Options();
-        CommandLineParser parser = new DefaultParser();
+public class HeaderUtility {
+    public static final long MAX_SIZE = (long) (Math.pow(2,30) * 3.8);
+    private static final List<Byte> INIT_BYTES = (List<Byte>) Arrays.asList(new Byte[]{0, 0, 0, 0, 6, 2, 7, 2, 5});
+
+    private HeaderUtility(){}
+
+    public static String makeHeader(File file){
+        long size = file.length();
+        String name = file.getName();
+        String out = "file.name:"+name;
+        out += "\nfile.size:"+size+"\n";
+        return out;
+    }
+
+    public static byte[] getBinaryHeader(String header){
+        byte[] tmp = header.getBytes(StandardCharsets.UTF_8);
+        byte[] out = new byte[tmp.length + INIT_BYTES.size()];
+        for (int i = 0; i < INIT_BYTES.size(); i++) {
+            out[i] = INIT_BYTES.get(i).byteValue();
+        }
+        for (int i = INIT_BYTES.size(); i < out.length; i++) {
+            out[i] = tmp[ i - (INIT_BYTES.size())];
+        }
+        return out;
+    }
+
+    public static byte[] toPrimitiveByte(Byte[] arr){
+        byte[] out = new byte[arr.length];
+        for(int i=0; i < arr.length; i++){
+            out[i] = arr[i];
+        }
+        return out;
+    }
+
+    /**
+     * Read the header file
+     * @param input
+     * @return
+     */
+    public static Properties readHeader(File input) {
         try {
-            cmd = parser.parse(opts, args);
-            if (cmd.hasOption("h")){
-                help();
-            }else if(cmd.hasOption("w"))
-                printWaranty();
-            else if(cmd.hasOption("c"))
-                printConditions();
-            else if(cmd.hasOption("l"))
-                printLicense();
-        } catch (ParseException e) {
-            LoggerProvider.getLogger(Main.class).error(e);
+            RandomAccessFile ras = new RandomAccessFile(input, "r");
+            ras.seek(INIT_BYTES.size());
+            Properties p = new Properties();
+            while (ras.getFilePointer() < ras.length()) {
+                    String[] split = ras.readLine().split(":");
+                    p.put(split[0].trim(), split[1].trim());
             }
+            ras.close();
+            return p;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // Pattern propertiesPattern = Pattern.compile("(?<property>\\w*-?\\w*:\\s?\\w*-?\\w*\\.?\\w*)");
+        return null;
     }
 }
